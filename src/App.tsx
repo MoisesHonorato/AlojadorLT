@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { Loader2, Plus, Search, X, MapPin } from 'lucide-react';
+import { Loader2, Plus, X, MapPin } from 'lucide-react';
 
 // Types
 import { House, Room, Collaborator } from './types';
@@ -15,7 +15,7 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { HousingPage } from './pages/HousingPage';
 import { CollaboratorsPage } from './pages/CollaboratorsPage';
-import { SearchPage } from './pages/SearchPage';
+import { ReportsPage } from './pages/ReportsPage';
 import { RoomDetailPage } from './pages/RoomDetailPage';
 import { ActionsPage } from './pages/ActionsPage';
 
@@ -301,7 +301,7 @@ export default function App() {
             <Route path="/" element={<DashboardPage houses={houses} />} />
             <Route path="/republicas" element={<HousingPage houses={houses} onSave={handleSaveHouse} onDelete={handleDeleteHouse} onSaveRoom={handleSaveRoom} onDeleteRoom={handleDeleteRoom} />} />
             <Route path="/pessoas" element={<CollaboratorsPage collaborators={collaborators} houses={houses} onSave={handleSaveCollaborator} onDelete={handleDeleteCollaborator} onCheckOut={handleCheckOut} onCheckInRequest={(id) => setSelectingCollabForRoom(id)} />} />
-            <Route path="/busca" element={<SearchPage collaborators={collaborators} houses={houses} />} />
+            <Route path="/relatorios" element={<ReportsPage collaborators={collaborators} houses={houses} />} />
             <Route path="/quarto/:houseId/:roomId" element={<RoomDetailPage houses={houses} collaborators={collaborators} onCheckOut={handleCheckOut} onCheckIn={(h, r, b) => setIsAllocating({ houseId: h, roomId: r, bedIndex: b })} />} />
             <Route path="/acoes" element={<ActionsPage onLogout={handleLogout} />} />
             <Route path="*" element={<Navigate to="/" replace />} />

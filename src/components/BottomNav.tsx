@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Building2, Users, Search, Plus } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, FileText, Plus } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '../lib/utils';
 
@@ -9,7 +9,7 @@ export const BottomNav = () => {
     { id: 'housing', icon: Building2, label: 'Repúblicas', path: '/republicas' },
     { id: 'actions', icon: Plus, label: '', isCenter: true, path: '/acoes' },
     { id: 'collaborators', icon: Users, label: 'Pessoas', path: '/pessoas' },
-    { id: 'search', icon: Search, label: 'Busca', path: '/busca' },
+    { id: 'reports', icon: FileText, label: 'Relatórios', path: '/relatorios' },
   ];
 
   return (
