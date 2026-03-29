@@ -20,6 +20,7 @@ export interface House {
   id: string;
   name: string;
   location: string;
+  gender?: 'Masculino' | 'Feminino' | 'Misto';
   rooms: Room[];
 }
 

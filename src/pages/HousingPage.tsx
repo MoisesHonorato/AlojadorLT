@@ -5,8 +5,8 @@ import { cn } from '../lib/utils';
 import { House, Room } from '../types';
 import { useNavigate } from 'react-router-dom';
 
-export const HousingPage = ({ houses, onSave, onDelete, onSaveRoom, onDeleteRoom }: { 
-  houses: House[], 
+export const HousingPage = ({ houses, onSave, onDelete, onSaveRoom, onDeleteRoom }: {
+  houses: House[],
   onSave: (h: Partial<House>) => Promise<void>,
   onDelete: (id: string) => void,
   onSaveRoom: (r: any) => Promise<void>,
@@ -55,7 +55,7 @@ export const HousingPage = ({ houses, onSave, onDelete, onSaveRoom, onDeleteRoom
           <p className="text-accent font-black text-xs uppercase tracking-widest mb-1">Gestão</p>
           <h1 className="text-4xl font-black text-primary-dark tracking-tighter uppercase">Alojamentos</h1>
         </div>
-        <motion.button 
+        <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={() => setIsEditing({})}
           className="w-12 h-12 bg-button text-white rounded-2xl flex items-center justify-center shadow-lg shadow-button/20 mb-1"
@@ -68,17 +68,18 @@ export const HousingPage = ({ houses, onSave, onDelete, onSaveRoom, onDeleteRoom
         {houses.length === 0 ? (
           <div className="py-20 text-center text-slate-400">Nenhum alojamento cadastrado</div>
         ) : (
-          houses.map(house => {
+          [...houses].sort((a, b) => a.name.localeCompare(b.name)).map(house => {
             const totalCapacity = house.rooms.reduce((acc, r) => acc + r.capacity, 0);
             const currentOccupancy = house.rooms.reduce((acc, r) => acc + r.occupants.filter(o => o !== null).length, 0);
             const isFull = currentOccupancy >= totalCapacity && totalCapacity > 0;
+            const genderColor = house.gender === 'Masculino' ? 'bg-blue-50/70 text-blue-900' : house.gender === 'Feminino' ? 'bg-pink-50/70 text-pink-900' : 'bg-white';
 
             return (
               <div key={house.id} className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm hover:border-slate-200 transition-colors">
                 <div className="flex">
-                  <button 
+                  <button
                     onClick={() => setExpandedHouse(expandedHouse === house.id ? null : house.id)}
-                    className="flex-1 p-5 flex justify-between items-center text-left"
+                    className={cn("flex-1 p-5 flex justify-between items-center text-left", genderColor)}
                   >
                     <div>
                       <h3 className="font-black text-primary-dark text-lg leading-tight mb-1 uppercase tracking-tight">{house.name}</h3>
@@ -88,7 +89,7 @@ export const HousingPage = ({ houses, onSave, onDelete, onSaveRoom, onDeleteRoom
                           "text-[10px] font-black uppercase px-2 py-0.5 rounded-full",
                           isFull ? "bg-accent/10 text-accent" : "bg-primary-vibrant/10 text-primary-vibrant"
                         )}>
-                          {currentOccupancy}/{totalCapacity} Vagas
+                          {isFull ? "Sem vagas" : `${totalCapacity - currentOccupancy} vaga${totalCapacity - currentOccupancy === 1 ? '' : 's'} disponíve${totalCapacity - currentOccupancy === 1 ? 'l' : 'is'}`}
                         </span>
                       </div>
                     </div>
@@ -96,17 +97,17 @@ export const HousingPage = ({ houses, onSave, onDelete, onSaveRoom, onDeleteRoom
                       "w-10 h-10 rounded-2xl flex items-center justify-center transition-all",
                       expandedHouse === house.id ? "bg-primary-dark text-white shadow-lg shadow-primary-dark/20" : "bg-slate-50 text-slate-300"
                     )}>
-                      <ChevronRight 
-                        size={20} 
-                        className={cn("transition-transform", expandedHouse === house.id && "rotate-90")} 
+                      <ChevronRight
+                        size={20}
+                        className={cn("transition-transform", expandedHouse === house.id && "rotate-90")}
                       />
                     </div>
                   </button>
                 </div>
-              
+
                 <AnimatePresence>
                   {expandedHouse === house.id && (
-                    <motion.div 
+                    <motion.div
                       initial={{ height: 0 }}
                       animate={{ height: 'auto' }}
                       exit={{ height: 0 }}
@@ -125,7 +126,7 @@ export const HousingPage = ({ houses, onSave, onDelete, onSaveRoom, onDeleteRoom
                         <div className="space-y-2">
                           <div className="flex justify-between items-center mb-1">
                             <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Quartos Disponíveis</p>
-                            <button 
+                            <button
                               onClick={() => setIsEditingRoom({ houseId: house.id })}
                               className="text-[10px] font-black uppercase text-button px-2 py-1 rounded-lg bg-button/5 flex items-center gap-1"
                             >
@@ -172,13 +173,13 @@ export const HousingPage = ({ houses, onSave, onDelete, onSaveRoom, onDeleteRoom
       {/* Cadastro/Edição de República Modal */}
       <AnimatePresence>
         {isEditing && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-primary-dark/60 backdrop-blur-sm z-[100] flex items-end"
           >
-            <motion.div 
+            <motion.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }} exit={{ y: '100%' }}
               className="bg-white w-full rounded-t-[40px] p-8 max-h-[90vh] overflow-y-auto max-w-md mx-auto"
@@ -204,6 +205,18 @@ export const HousingPage = ({ houses, onSave, onDelete, onSaveRoom, onDeleteRoom
                     <input type="text" placeholder="CIDADE, BAIRRO OU RUA" value={(isEditing as any).location || ''} onChange={(e) => setIsEditing({ ...isEditing, location: e.target.value.toUpperCase() } as any)} className="w-full bg-slate-50 border-none rounded-2xl py-4 pl-14 pr-6 font-semibold text-primary-dark uppercase" />
                   </div>
                 </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Tipo de República</label>
+                  <select
+                    value={isEditing.gender || 'Misto'}
+                    onChange={(e) => setIsEditing({ ...isEditing, gender: e.target.value as any })}
+                    className="w-full bg-slate-50 border-none rounded-2xl py-4 px-6 font-semibold text-primary-dark uppercase appearance-none"
+                  >
+                    <option value="Misto">Misto</option>
+                    <option value="Masculino">Masculino</option>
+                    <option value="Feminino">Feminino</option>
+                  </select>
+                </div>
                 <div className="pt-6">
                   <motion.button whileTap={{ scale: 0.95 }} type="submit" disabled={isLoading} className="w-full bg-button text-white py-5 rounded-3xl font-black shadow-xl shadow-button/20 text-sm tracking-widest uppercase flex items-center justify-center gap-2">
                     {isLoading ? <Loader2 className="animate-spin" size={20} /> : (isEditing.id ? "Salvar Alterações" : "Cadastrar República")}
@@ -218,13 +231,13 @@ export const HousingPage = ({ houses, onSave, onDelete, onSaveRoom, onDeleteRoom
       {/* Cadastro/Edição de QUARTO Modal */}
       <AnimatePresence>
         {isEditingRoom && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-primary-dark/60 backdrop-blur-sm z-[101] flex items-end"
           >
-            <motion.div 
+            <motion.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }} exit={{ y: '100%' }}
               className="bg-white w-full rounded-t-[40px] p-8 max-h-[90vh] overflow-y-auto max-w-md mx-auto"
@@ -249,7 +262,7 @@ export const HousingPage = ({ houses, onSave, onDelete, onSaveRoom, onDeleteRoom
                     <input type="text" required placeholder="EX: QUARTO 01" value={isEditingRoom.name || ''} onChange={(e) => setIsEditingRoom({ ...isEditingRoom, name: e.target.value.toUpperCase() })} className="w-full bg-slate-50 border-none rounded-2xl py-4 pl-14 pr-6 font-semibold text-primary-dark uppercase" />
                   </div>
                 </div>
-                
+
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Capacidade (Nº de Vagas)</label>
                   <div className="relative">

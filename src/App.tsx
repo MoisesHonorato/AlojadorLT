@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { Loader2, Plus, X, MapPin } from 'lucide-react';
+import { Loader2, Plus, X, MapPin, ChevronRight } from 'lucide-react';
 
 // Types
 import { House, Room, Collaborator } from './types';
@@ -36,6 +36,7 @@ export default function App() {
   const [confirmDialog, setConfirmDialog] = useState<{ title: string, message: string, onConfirm: () => void } | null>(null);
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
   const [allocationSearch, setAllocationSearch] = useState('');
+  const [expandedAllocationHouse, setExpandedAllocationHouse] = useState<string | null>(null);
 
   useEffect(() => {
     checkSession();
@@ -147,7 +148,8 @@ export default function App() {
         body: JSON.stringify({
           id: house.id,
           nome: house.name,
-          endereco: (house as any).location
+          endereco: (house as any).location,
+          gender: house.gender
         }),
         credentials: 'include'
       });
@@ -342,23 +344,49 @@ export default function App() {
                 </div>
                 <button onClick={() => setSelectingCollabForRoom(null)}><X size={24} className="text-slate-300" /></button>
               </div>
-              <div className="flex-1 overflow-y-auto space-y-6">
-                {houses.map(house => {
+              <div className="flex-1 overflow-y-auto space-y-4">
+                {[...houses].sort((a,b) => a.name.localeCompare(b.name)).map(house => {
                   const av = house.rooms.filter(r => r.occupants.some(o => o === null));
                   if (av.length === 0) return null;
+
+                  const isMasc = house.gender === 'Masculino';
+                  const isFem = house.gender === 'Feminino';
+                  
+                  const titleColor = isMasc ? 'text-blue-500' : isFem ? 'text-pink-500' : 'text-slate-400';
+                  const iconColor = isMasc ? 'text-blue-400' : isFem ? 'text-pink-400' : 'text-slate-300';
+                  const cardBg = isMasc ? 'bg-blue-50/70 border-blue-100' : isFem ? 'bg-pink-50/70 border-pink-100' : 'bg-slate-50 border-transparent';
+                  const roomTitColor = isMasc ? 'text-blue-400' : isFem ? 'text-pink-400' : 'text-slate-400';
+
                   return (
-                    <div key={house.id} className="space-y-3">
-                      <div className="flex gap-2"><MapPin size={14} className="text-slate-300" /><span className="text-xs font-black uppercase text-slate-400">{house.name}</span></div>
-                      {av.map(room => (
-                        <div key={room.id} className="bg-slate-50 rounded-2xl p-4">
-                          <p className="text-[10px] font-black uppercase text-slate-400 mb-2">{room.name}</p>
-                          <div className="flex flex-wrap gap-2">
-                            {room.occupants.map((occ, idx) => occ === null && (
-                              <button key={idx} onClick={() => directCheckIn(selectingCollabForRoom, house.id, room.id, idx)} className="px-4 py-2 bg-white rounded-xl text-[10px] font-black uppercase text-button border border-slate-100 shadow-sm">Vaga {idx + 1}</button>
-                            ))}
-                          </div>
+                    <div key={house.id} className="space-y-2 border-b border-slate-100 pb-2">
+                      <button onClick={() => setExpandedAllocationHouse(expandedAllocationHouse === house.id ? null : house.id)} className="w-full flex justify-between items-center text-left py-2">
+                        <div className="flex gap-2 items-center">
+                          <MapPin size={14} className={iconColor} />
+                          <span className={`text-xs font-black uppercase ${titleColor}`}>{house.name}</span>
                         </div>
-                      ))}
+                        <ChevronRight size={16} className={`transition-transform ${iconColor} ${expandedAllocationHouse === house.id ? "rotate-90" : ""}`} />
+                      </button>
+                      
+                      <AnimatePresence>
+                        {expandedAllocationHouse === house.id && (
+                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                            <div className="grid grid-cols-2 gap-3 pt-1 pb-3">
+                              {av.map(room => (
+                                <div key={room.id} className={`${cardBg} border rounded-2xl p-4 flex flex-col`}>
+                                  <p className={`text-[10px] font-black uppercase ${roomTitColor} mb-2`}>{room.name}</p>
+                                  <div className="flex flex-wrap gap-2 mt-auto">
+                                    {room.occupants.map((occ, idx) => occ === null && (
+                                      <button key={idx} onClick={() => directCheckIn(selectingCollabForRoom, house.id, room.id, idx)} className="px-3 py-1.5 bg-white rounded-xl text-[9px] font-black uppercase text-primary-dark border border-slate-100 shadow-sm hover:border-slate-300 hover:shadow-md transition-all w-full text-center">
+                                        Vaga {idx + 1}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   );
                 })}

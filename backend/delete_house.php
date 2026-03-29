@@ -17,8 +17,7 @@ if (!$data || !isset($data['id'])) {
 $id = $data['id'];
 
 try {
-    // 1. Verificar se há pessoas alocadas em qualquer quarto desta republica
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM alocacoes a JOIN quartos q ON a.quarto_id = q.id WHERE q.republica_id = ? AND a.data_saida IS NULL");
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM alocacoes a JOIN quartos q ON a.quarto_id = q.id WHERE q.republica_id = ? AND a.status = 'Ativo'");
     $stmt->execute([$id]);
     if ($stmt->fetchColumn() > 0) {
         echo json_encode(['success' => false, 'error' => 'Não é possível excluir: Há pessoas alocadas nesta república.']);

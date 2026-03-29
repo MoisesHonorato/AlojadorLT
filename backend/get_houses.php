@@ -9,7 +9,7 @@ require_once 'auth.php';
 
 try {
     // 1. Get all republicas
-    $republicas_stmt = $pdo->query("SELECT id, nome as name, endereco as location FROM republicas");
+    $republicas_stmt = $pdo->query("SELECT id, nome as name, endereco as location, gender FROM republicas");
     $republicas = $republicas_stmt->fetchAll();
 
     $final_data = [];
@@ -53,6 +53,7 @@ try {
             'id'       => (string)$rep_id,
             'name'     => $rep['name'],
             'location' => $rep['location'],
+            'gender'   => isset($rep['gender']) ? $rep['gender'] : 'Misto',
             'rooms'    => $final_rooms
         ];
     }

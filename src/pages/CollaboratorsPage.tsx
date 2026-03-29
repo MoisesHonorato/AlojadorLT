@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { ChevronRight, Plus, Search, X, UserPlus, Trash2, Edit2, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { Collaborator, House } from '../types';
 
-export const CollaboratorsPage = ({ collaborators, houses, onSave, onDelete, onCheckOut, onCheckInRequest }: { 
-  collaborators: Collaborator[], 
+export const CollaboratorsPage = ({ collaborators, houses, onSave, onDelete, onCheckOut, onCheckInRequest }: {
+  collaborators: Collaborator[],
   houses: House[],
   onSave: (c: Partial<Collaborator>) => Promise<void>,
   onDelete: (id: string) => void,
@@ -15,6 +15,22 @@ export const CollaboratorsPage = ({ collaborators, houses, onSave, onDelete, onC
   const [search, setSearch] = useState('');
   const [isEditing, setIsEditing] = useState<Partial<Collaborator> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(15);
+
+  useEffect(() => {
+    setVisibleCount(15);
+  }, [search]);
+
+  const observer = useRef<IntersectionObserver | null>(null);
+  const lastElementRef = useCallback((node: HTMLDivElement | null) => {
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        setVisibleCount(prev => prev + 15);
+      }
+    });
+    if (node) observer.current.observe(node);
+  }, []);
 
   const getFullLoc = (c: Collaborator) => {
     for (const house of houses) {
@@ -28,11 +44,11 @@ export const CollaboratorsPage = ({ collaborators, houses, onSave, onDelete, onC
     return null;
   };
 
-  const filtered = collaborators.filter(c => 
+  const filtered = collaborators.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
     (c.cpf && c.cpf.includes(search))
-  );
-  
+  ).sort((a, b) => a.name.localeCompare(b.name));
+
   const formatCPF = (value: string) => {
     const numbers = value.replace(/\D/g, '');
     return numbers
@@ -64,9 +80,9 @@ export const CollaboratorsPage = ({ collaborators, houses, onSave, onDelete, onC
       <header className="mb-8 flex justify-between items-end">
         <div>
           <p className="text-accent font-black text-xs uppercase tracking-widest mb-1">Equipe</p>
-          <h1 className="text-4xl font-black text-primary-dark tracking-tighter uppercase">Pessoas</h1>
+          <h1 className="text-4xl font-black text-primary-dark tracking-tighter uppercase">Colaboradores</h1>
         </div>
-        <motion.button 
+        <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={() => setIsEditing({})}
           className="w-12 h-12 bg-button text-white rounded-2xl flex items-center justify-center shadow-lg shadow-button/20 mb-1"
@@ -77,7 +93,7 @@ export const CollaboratorsPage = ({ collaborators, houses, onSave, onDelete, onC
 
       <div className="relative mb-6">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-        <input 
+        <input
           type="text"
           placeholder="Buscar por nome ou CPF..."
           value={search}
@@ -87,14 +103,16 @@ export const CollaboratorsPage = ({ collaborators, houses, onSave, onDelete, onC
       </div>
 
       <div className="space-y-3">
-        {filtered.map(c => {
+        {filtered.slice(0, visibleCount).map((c, index) => {
           const locInfo = getFullLoc(c);
           const isAvailable = !locInfo;
+          const isLastElement = index === filtered.slice(0, visibleCount).length - 1;
 
           return (
-            <motion.div 
+            <motion.div
               layout
-              key={c.id} 
+              ref={isLastElement ? lastElementRef : null}
+              key={c.id}
               className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm"
             >
               <div className="flex justify-between items-center mb-3">
@@ -122,7 +140,7 @@ export const CollaboratorsPage = ({ collaborators, houses, onSave, onDelete, onC
 
               <div className="flex gap-2 border-t border-slate-50 pt-3">
                 {isAvailable ? (
-                  <button 
+                  <button
                     onClick={() => onCheckInRequest(c.id)}
                     className="flex-1 bg-primary-vibrant/5 text-primary-vibrant py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2"
                   >
@@ -130,13 +148,13 @@ export const CollaboratorsPage = ({ collaborators, houses, onSave, onDelete, onC
                   </button>
                 ) : (
                   <>
-                    <button 
+                    <button
                       onClick={() => onCheckInRequest(c.id)}
                       className="flex-1 bg-amber-50 text-amber-600 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2"
                     >
                       <ChevronRight size={14} className="rotate-90" /> Transferir
                     </button>
-                    <button 
+                    <button
                       onClick={() => onCheckOut(locInfo.houseId, locInfo.roomId, locInfo.bedIndex)}
                       className="flex-1 bg-accent/5 text-accent py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2"
                     >
@@ -153,13 +171,13 @@ export const CollaboratorsPage = ({ collaborators, houses, onSave, onDelete, onC
       {/* Cadastro/Edição Modal */}
       <AnimatePresence>
         {isEditing && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-primary-dark/60 backdrop-blur-sm z-[100] flex items-end"
           >
-            <motion.div 
+            <motion.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
@@ -167,7 +185,7 @@ export const CollaboratorsPage = ({ collaborators, houses, onSave, onDelete, onC
             >
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-black text-primary-dark tracking-tighter uppercase">
-                  {isEditing.id ? 'Editar Pessoa' : 'Nova Pessoa'}
+                  {isEditing.id ? 'Editar Colaborador' : 'Novo Colaborador'}
                 </h2>
                 <button onClick={() => setIsEditing(null)} className="p-2 text-slate-300">
                   <X size={24} />
@@ -177,7 +195,7 @@ export const CollaboratorsPage = ({ collaborators, houses, onSave, onDelete, onC
               <form onSubmit={handleSave} className="space-y-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Nome Completo</label>
-                  <input 
+                  <input
                     type="text"
                     required
                     placeholder="NOME DO COLABORADOR"
@@ -186,10 +204,10 @@ export const CollaboratorsPage = ({ collaborators, houses, onSave, onDelete, onC
                     className="w-full bg-slate-50 border-none rounded-2xl py-4 px-6 font-semibold text-primary-dark uppercase text-sm"
                   />
                 </div>
-                
+
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">CPF</label>
-                  <input 
+                  <input
                     type="text"
                     placeholder="000.000.000-00"
                     value={isEditing.cpf || ''}
@@ -197,10 +215,10 @@ export const CollaboratorsPage = ({ collaborators, houses, onSave, onDelete, onC
                     className="w-full bg-slate-50 border-none rounded-2xl py-4 px-6 font-semibold text-primary-dark text-sm"
                   />
                 </div>
-                
+
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Cargo</label>
-                  <input 
+                  <input
                     type="text"
                     placeholder="CARGO"
                     value={isEditing.role || ''}
@@ -211,7 +229,7 @@ export const CollaboratorsPage = ({ collaborators, houses, onSave, onDelete, onC
 
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Empresa</label>
-                  <input 
+                  <input
                     type="text"
                     placeholder="EMPRESA"
                     value={isEditing.company || ''}
@@ -219,16 +237,16 @@ export const CollaboratorsPage = ({ collaborators, houses, onSave, onDelete, onC
                     className="w-full bg-slate-50 border-none rounded-2xl py-4 px-6 font-semibold text-primary-dark uppercase text-sm"
                   />
                 </div>
-       
+
 
                 <div className="pt-6">
-                  <motion.button 
+                  <motion.button
                     whileTap={{ scale: 0.95 }}
                     type="submit"
                     disabled={isLoading}
                     className="w-full bg-button text-white py-5 rounded-3xl font-black shadow-xl shadow-button/20 text-sm tracking-widest uppercase flex items-center justify-center gap-2"
                   >
-                    {isLoading ? <Loader2 className="animate-spin" size={20} /> : (isEditing.id ? "Salvar Alterações" : "Cadastrar Pessoa")}
+                    {isLoading ? <Loader2 className="animate-spin" size={20} /> : (isEditing.id ? "Salvar Alterações" : "Cadastrar")}
                   </motion.button>
                 </div>
               </form>

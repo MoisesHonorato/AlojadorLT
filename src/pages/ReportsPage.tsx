@@ -1,10 +1,7 @@
-import React, { useState } from 'react';
-import { FileText, Building2, Users, Printer, Loader2, Share2, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import React from 'react';
+import { FileText, Building2, Users, Printer } from 'lucide-react';
+import { motion } from 'motion/react';
 import { House, Collaborator } from '../types';
-
-// @ts-ignore
-import html2pdf from 'html2pdf.js';
 
 interface ReportsPageProps {
   houses: House[];
@@ -12,7 +9,6 @@ interface ReportsPageProps {
 }
 
 type ReportType = 'by_house' | 'unallocated' | 'full_list';
-type ActionType = 'print' | 'share';
 
 interface ReportConfig {
   id: ReportType;
@@ -47,8 +43,6 @@ const REPORTS: ReportConfig[] = [
 ];
 
 export const ReportsPage = ({ houses, collaborators }: ReportsPageProps) => {
-  const [pendingReport, setPendingReport] = useState<ReportType | null>(null);
-  const [processing, setProcessing] = useState<ActionType | null>(null);
 
   const getAllocatedIds = (): Set<string> => {
     const ids = new Set<string>();
@@ -113,7 +107,7 @@ export const ReportsPage = ({ houses, collaborators }: ReportsPageProps) => {
 
     if (reportId === 'by_house') {
       let body = summaryBox;
-      houses.forEach(house => {
+      [...houses].sort((a,b) => a.name.localeCompare(b.name)).forEach(house => {
         const hTotal = house.rooms.reduce((s, r) => s + r.capacity, 0);
         const hOcc = house.rooms.reduce((s, r) => s + r.occupants.filter(Boolean).length, 0);
         const hAvail = hTotal - hOcc;
@@ -151,7 +145,7 @@ export const ReportsPage = ({ houses, collaborators }: ReportsPageProps) => {
       let body = summaryBox;
       body += `<div class="section"><div class="section-title">Todos os Colaboradores</div>`;
       body += `<table><thead><tr><th>#</th><th>Nome</th><th>Cargo</th><th>Empresa</th><th>Alojamento</th></tr></thead><tbody>`;
-      collaborators.forEach((c, idx) => {
+      [...collaborators].sort((a, b) => a.name.localeCompare(b.name)).forEach((c, idx) => {
         let loc = '—';
         for (const h of houses) for (const r of h.rooms) if (r.occupants.includes(c.id)) { loc = `${h.name.split(' - ')[0]} / ${r.name}`; break; }
         body += `<tr><td style="color:#94a3b8;font-size:11px;">${idx + 1}</td><td class="name">${c.name}</td><td class="role">${c.role ?? '—'}</td><td class="role">${c.company ?? '—'}</td><td class="role">${loc}</td></tr>`;
@@ -185,69 +179,7 @@ export const ReportsPage = ({ houses, collaborators }: ReportsPageProps) => {
     win.document.close();
     setTimeout(() => { win.focus(); win.print(); }, 400);
   };
-
-  const handleShare = async (reportId: ReportType) => {
-    const { html, title } = buildHtmlContent(reportId);
-    setProcessing('share');
-
-    try {
-      // Render HTML to a hidden div, then convert to PDF blob
-      const container = document.createElement('div');
-      container.style.position = 'fixed';
-      container.style.left = '-9999px';
-      container.style.top = '0';
-      container.style.width = '794px'; // A4 width in px at 96dpi
-      container.innerHTML = html;
-      document.body.appendChild(container);
-
-      const pdfBlob: Blob = await html2pdf()
-        .set({
-          margin: 0,
-          filename: `${title}.pdf`,
-          html2canvas: { scale: 2, useCORS: true },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        })
-        .from(container)
-        .outputPdf('blob');
-
-      document.body.removeChild(container);
-
-      const file = new File([pdfBlob], `${title}.pdf`, { type: 'application/pdf' });
-
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title });
-      } else {
-        // Fallback: download
-        const url = URL.createObjectURL(pdfBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${title}.pdf`;
-        a.click();
-        URL.revokeObjectURL(url);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setProcessing(null);
-      setPendingReport(null);
-    }
-  };
-
-  const handleAction = async (action: ActionType) => {
-    if (!pendingReport) return;
-    setProcessing(action);
-    await new Promise(r => setTimeout(r, 200));
-    if (action === 'print') {
-      handlePrint(pendingReport);
-      setProcessing(null);
-      setPendingReport(null);
-    } else {
-      await handleShare(pendingReport);
-    }
-  };
-
   const { total, occupied, available } = getSlotStats();
-  const pendingConfig = REPORTS.find(r => r.id === pendingReport);
 
   return (
     <div className="px-6 pt-8 pb-32">
@@ -292,7 +224,7 @@ export const ReportsPage = ({ houses, collaborators }: ReportsPageProps) => {
             <div className="px-5 pb-4">
               <motion.button
                 whileTap={{ scale: 0.97 }}
-                onClick={() => setPendingReport(report.id)}
+                onClick={() => handlePrint(report.id)}
                 className={`w-full bg-gradient-to-r ${report.color} text-white py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg transition-opacity`}
               >
                 <Printer size={16} /> Gerar Relatório
@@ -301,85 +233,6 @@ export const ReportsPage = ({ houses, collaborators }: ReportsPageProps) => {
           </motion.div>
         ))}
       </div>
-
-      <div className="mt-8 p-4 bg-slate-50 rounded-2xl">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">
-          Imprima ou compartilhe o relatório diretamente como PDF
-        </p>
-      </div>
-
-      {/* Bottom Sheet de ação */}
-      <AnimatePresence>
-        {pendingReport && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-primary-dark/60 backdrop-blur-sm z-[100] flex items-end justify-center"
-            onClick={() => { if (!processing) setPendingReport(null); }}
-          >
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-              onClick={e => e.stopPropagation()}
-              className="bg-white w-full max-w-md rounded-t-[40px] p-8"
-            >
-              {/* Handle */}
-              <div className="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-6" />
-
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <p className="text-[10px] font-black uppercase text-accent tracking-widest mb-1">Relatório</p>
-                  <h2 className="text-xl font-black text-primary-dark uppercase tracking-tight">{pendingConfig?.title}</h2>
-                </div>
-                <button
-                  onClick={() => { if (!processing) setPendingReport(null); }}
-                  className="text-slate-300 hover:text-slate-400 transition-colors p-1"
-                >
-                  <X size={22} />
-                </button>
-              </div>
-
-              <p className="text-xs font-semibold text-slate-400 mb-6 leading-relaxed">
-                Como deseja exportar este relatório?
-              </p>
-
-              <div className="space-y-3">
-                {/* Imprimir */}
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => handleAction('print')}
-                  disabled={!!processing}
-                  className="w-full bg-slate-50 border border-slate-100 text-primary-dark py-4 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 disabled:opacity-50 transition-opacity"
-                >
-                  {processing === 'print' ? (
-                    <Loader2 size={18} className="animate-spin" />
-                  ) : (
-                    <Printer size={18} />
-                  )}
-                  Imprimir / Salvar PDF
-                </motion.button>
-
-                {/* Compartilhar */}
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => handleAction('share')}
-                  disabled={!!processing}
-                  className={`w-full bg-gradient-to-r ${pendingConfig?.color} text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-lg disabled:opacity-50 transition-opacity`}
-                >
-                  {processing === 'share' ? (
-                    <><Loader2 size={18} className="animate-spin" /> Gerando PDF...</>
-                  ) : (
-                    <><Share2 size={18} /> Compartilhar PDF</>
-                  )}
-                </motion.button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

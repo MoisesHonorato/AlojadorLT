@@ -16,15 +16,16 @@ if (!$data || !isset($data['nome'])) {
 
 $nome = $data['nome'];
 $endereco = $data['endereco'] ?? '';
+$gender = $data['gender'] ?? 'Misto';
 $id = $data['id'] ?? null;
 
 try {
     if ($id) {
-        $stmt = $pdo->prepare("UPDATE republicas SET nome = ?, endereco = ? WHERE id = ?");
-        $stmt->execute([$nome, $endereco, $id]);
+        $stmt = $pdo->prepare("UPDATE republicas SET nome = ?, endereco = ?, gender = ? WHERE id = ?");
+        $stmt->execute([$nome, $endereco, $gender, $id]);
     } else {
-        $stmt = $pdo->prepare("INSERT INTO republicas (nome, endereco) VALUES (?, ?)");
-        $stmt->execute([$nome, $endereco]);
+        $stmt = $pdo->prepare("INSERT INTO republicas (nome, endereco, gender) VALUES (?, ?, ?)");
+        $stmt->execute([$nome, $endereco, $gender]);
         $id = $pdo->lastInsertId();
     }
     echo json_encode(['success' => true, 'id' => $id]);

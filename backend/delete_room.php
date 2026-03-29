@@ -17,8 +17,7 @@ if (!$data || !isset($data['id'])) {
 $id = $data['id'];
 
 try {
-    // 1. Verificar se há pessoas alocadas neste quarto
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM alocacoes WHERE quarto_id = ? AND data_saida IS NULL");
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM alocacoes WHERE quarto_id = ? AND status = 'Ativo'");
     $stmt->execute([$id]);
     if ($stmt->fetchColumn() > 0) {
         echo json_encode(['success' => false, 'error' => 'Não é possível excluir: Há pessoas alocadas neste quarto.']);
